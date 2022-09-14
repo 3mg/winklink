@@ -1,16 +1,16 @@
-pragma solidity ^0.4.25;
+pragma solidity >=0.7.0 <0.9.0;
 
 // ----------------------------------------------------------------------------
 // TRON TRC20
 // ----------------------------------------------------------------------------
-contract TRC20Interface {
+abstract contract TRC20Interface {
 
-  function totalSupply() public view returns (uint);
-  function balanceOf(address guy) public view returns (uint);
-  function allowance(address src, address guy) public view returns (uint);
-  function approve(address guy, uint wad) public returns (bool);
-  function transfer(address dst, uint wad) public returns (bool);
-  function transferFrom(address src, address dst, uint wad) public returns (bool);
+  function totalSupply() public virtual view returns (uint);
+  function balanceOf(address guy) public virtual view returns (uint);
+  function allowance(address src, address guy) public virtual view returns (uint);
+  function approve(address guy, uint wad) public virtual returns (bool);
+  function transfer(address dst, uint wad) public virtual returns (bool);
+  function transferFrom(address src, address dst, uint wad) public virtual returns (bool) ;
 
   event Transfer(address indexed from, address indexed to, uint tokens);
   event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -63,8 +63,8 @@ contract Ownable {
 }
 
 
-contract Receiver {
-  function onTokenTransfer(address _sender, uint _value, bytes _data) external;
+abstract contract Receiver {
+  function onTokenTransfer(address _sender, uint _value, bytes memory _data) external virtual;
 }
 
 // ----------------------------------------------------------------------------
@@ -88,7 +88,7 @@ contract WinkMid is Ownable {
     return true;
   }
 
-  function transferAndCall(address from, address to, uint tokens, bytes _data) public validRecipient(to) returns (bool success) {
+  function transferAndCall(address from, address to, uint tokens, bytes memory _data) public validRecipient(to) returns (bool success) {
     token.transferFrom(from,to,tokens);
     emit Transfer(from, to, tokens, _data);
     if (isContract(to)) {
@@ -115,7 +115,7 @@ contract WinkMid is Ownable {
     _;
   }
 
-  function contractFallback(address _to, uint _value, bytes _data) private
+  function contractFallback(address _to, uint _value, bytes memory _data) private
   {
     Receiver receiver = Receiver(_to);
     receiver.onTokenTransfer(msg.sender, _value, _data);

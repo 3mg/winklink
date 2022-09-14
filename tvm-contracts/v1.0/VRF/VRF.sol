@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 /** ****************************************************************************
   * @notice Verification of verifiable-random-function (VRF) proofs, following
@@ -266,7 +266,7 @@ contract VRF {
     bytes32 scalarTimesX = bytes32(mulmod(scalar, x, GROUP_ORDER));
     address actual = ecrecover(bytes32(0), v, bytes32(x), scalarTimesX);
     // Explicit conversion to address takes bottom 160 bits
-    address expected = address(uint256(keccak256(abi.encodePacked(product))));
+    address expected = address(uint160(bytes20(keccak256(abi.encodePacked(product)))));
     return (actual == expected);
   }
 
@@ -312,7 +312,7 @@ contract VRF {
       **************************************************************************
       Return values are projective coordinates of [px,py,1]+[qx,qy,1] as points
       on secp256k1, in P²(𝔽ₙ)
-      @return sx 
+      @return sx
       @return sy
       @return sz
   */
@@ -464,7 +464,7 @@ contract VRF {
       // taking the sum as they do in step 7 of section 5.1.)
       require(
         verifyLinearCombinationWithGenerator(c, pk, s, uWitness),
-        "addr(c*pk+s*g)≠_uWitness"
+        "addr(c*pk+s*g)!=_uWitness"
       );
       // Step 4. of IETF draft section 5.3 (pk corresponds to Y, seed to alpha_string)
       uint256[2] memory hash = hashToCurve(pk, seed);

@@ -1,5 +1,6 @@
-pragma solidity ^0.4.25;
+pragma solidity >=0.7.0 <0.9.0;
 
+import "./SafeMath.sol";
 
 /**
  * @title Ownable
@@ -52,57 +53,6 @@ contract Ownable {
     }
 }
 
-
-/**
- * @title SafeMath
- * @dev Math operations with safety checks that throw on error
- */
-library SafeMath {
-
-    /**
-    * @dev Multiplies two numbers, throws on overflow.
-    */
-    function mul(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
-        // Gas optimization: this is cheaper than asserting 'a' not being zero, but the
-        // benefit is lost if 'b' is also tested.
-        // See: https://github.com/OpenZeppelin/openzeppelin-solidity/pull/522
-        if (_a == 0) {
-            return 0;
-        }
-
-        c = _a * _b;
-        assert(c / _a == _b);
-        return c;
-    }
-
-    /**
-    * @dev Integer division of two numbers, truncating the quotient.
-    */
-    function div(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        // assert(_b > 0); // Solidity automatically throws when dividing by 0
-        // uint256 c = _a / _b;
-        // assert(_a == _b * c + _a % _b); // There is no case in which this doesn't hold
-        return _a / _b;
-    }
-
-    /**
-    * @dev Subtracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
-    */
-    function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        assert(_b <= _a);
-        return _a - _b;
-    }
-
-    /**
-    * @dev Adds two numbers, throws on overflow.
-    */
-    function add(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
-        c = _a + _b;
-        assert(c >= _a);
-        return c;
-    }
-}
-
 interface WinklinkRequestInterface {
     function oracleRequest(
         address sender,
@@ -112,7 +62,7 @@ interface WinklinkRequestInterface {
         bytes4 callbackFunctionId,
         uint256 nonce,
         uint256 version,
-        bytes data
+        bytes memory data
     ) external;
 
     function cancelOracleRequest(
@@ -138,28 +88,28 @@ interface OracleInterface {
     function withdrawable() external view returns (uint256);
 }
 
-contract WinkMid {
+abstract contract WinkMid {
 
-    function setToken(address tokenAddress) public ;
+    function setToken(address tokenAddress) public virtual ;
 
-    function transferAndCall(address from, address to, uint tokens, bytes _data) public returns (bool success) ;
+    function transferAndCall(address from, address to, uint tokens, bytes memory _data) public virtual returns (bool success) ;
 
-    function balanceOf(address guy) public view returns (uint);
+    function balanceOf(address guy) public virtual view returns (uint);
 
-    function transferFrom(address src, address dst, uint wad) public returns (bool);
+    function transferFrom(address src, address dst, uint wad) public virtual returns (bool);
 
-    function allowance(address src, address guy) public view returns (uint);
+    function allowance(address src, address guy) public virtual view returns (uint);
 
 }
 
-contract TRC20Interface {
+abstract contract TRC20Interface {
 
-    function totalSupply() public view returns (uint);
-    function balanceOf(address guy) public view returns (uint);
-    function allowance(address src, address guy) public view returns (uint);
-    function approve(address guy, uint wad) public returns (bool);
-    function transfer(address dst, uint wad) public returns (bool);
-    function transferFrom(address src, address dst, uint wad) public returns (bool);
+    function totalSupply() public virtual view returns (uint);
+    function balanceOf(address guy) public virtual view returns (uint);
+    function allowance(address src, address guy) public virtual view returns (uint);
+    function approve(address guy, uint wad) public virtual returns (bool);
+    function transfer(address dst, uint wad) public virtual returns (bool);
+    function transferFrom(address src, address dst, uint wad) public virtual returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -224,7 +174,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
     function onTokenTransfer(
         address _sender,
         uint256 _amount,
-        bytes _data
+        bytes memory _data
     )
     public
     onlyWinkMid
@@ -236,7 +186,8 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
             mstore(add(_data, 68), _amount) // ensure correct amount is passed
         }
         // solhint-disable-next-line avoid-low-level-calls
-        require(address(this).delegatecall(_data), "Unable to create request"); // calls oracleRequest
+        (bool success, ) = address(this).delegatecall(_data);
+        require(success, "Unable to create request"); // calls oracleRequest
     }
 
     /**
@@ -272,16 +223,17 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
         bytes4 _callbackFunctionId,
         uint256 _nonce,
         uint256 _dataVersion,
-        bytes _data
+        bytes memory _data
     )
     external
+    override
     onlyWinkMid
     checkCallbackAddress(_callbackAddress)
     {
         bytes32 requestId = keccak256(abi.encodePacked(_sender, _nonce));
         require(commitments[requestId] == 0, "Must use a unique ID");
         // solhint-disable-next-line not-rely-on-time
-        uint256 expiration = now.add(EXPIRY_TIME);
+        uint256 expiration = block.timestamp.add(EXPIRY_TIME);
 
         commitments[requestId] = keccak256(
             abi.encodePacked(
@@ -326,6 +278,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
         bytes32 _data
     )
     external
+    override
     onlyAuthorizedNode
     isValidRequest(_requestId)
     returns (bool)
@@ -344,7 +297,8 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
         // All updates to the oracle's fulfillment should come before calling the
         // callback(addr+functionId) as it is untrusted.
         // See: https://solidity.readthedocs.io/en/develop/security-considerations.html#use-the-checks-effects-interactions-pattern
-        return _callbackAddress.call(_callbackFunctionId, _requestId, _data); // solhint-disable-line avoid-low-level-calls
+        (bool success, /*bytes memory returnedData*/) = _callbackAddress.call(abi.encodeWithSelector(_callbackFunctionId, _requestId, _data)); // solhint-disable-line avoid-low-level-calls
+        return success;
     }
 
     /**
@@ -352,7 +306,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      * @param _node The address of the Winklink node
      * @return The authorization status of the node
      */
-    function getAuthorizationStatus(address _node) external view returns (bool) {
+    function getAuthorizationStatus(address _node) external override view returns (bool) {
         return authorizedNodes[_node];
     }
 
@@ -361,7 +315,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      * @param _node The address of the Winklink node
      * @param _allowed Bool value to determine if the node can fulfill requests
      */
-    function setFulfillmentPermission(address _node, bool _allowed) external onlyOwner {
+    function setFulfillmentPermission(address _node, bool _allowed) external override onlyOwner {
         authorizedNodes[_node] = _allowed;
     }
 
@@ -373,6 +327,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      */
     function withdraw(address _recipient, uint256 _amount)
     external
+    override
     onlyOwner
     hasAvailableFunds(_amount)
     {
@@ -386,7 +341,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      * @dev We use `ONE_FOR_CONSISTENT_GAS_COST` in place of 0 in storage
      * @return The amount of withdrawable LINK on the contract
      */
-    function withdrawable() external view onlyOwner returns (uint256) {
+    function withdrawable() external override view onlyOwner returns (uint256) {
         return withdrawableTokens.sub(ONE_FOR_CONSISTENT_GAS_COST);
     }
 
@@ -405,7 +360,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
         uint256 _payment,
         bytes4 _callbackFunc,
         uint256 _expiration
-    ) external {
+    ) external override {
         bytes32 paramsHash = keccak256(
             abi.encodePacked(
                 _payment,
@@ -415,7 +370,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
         );
         require(paramsHash == commitments[_requestId], "Params do not match request ID");
         // solhint-disable-next-line not-rely-on-time
-        require(_expiration <= now, "Request is not expired");
+        require(_expiration <= block.timestamp, "Request is not expired");
 
         delete commitments[_requestId];
         emit CancelOracleRequest(_requestId);
@@ -463,7 +418,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      * @dev Reverts if the given data does not begin with the `oracleRequest` function selector
      * @param _data The data payload of the request
      */
-    modifier permittedFunctionsForLINK(bytes _data) {
+    modifier permittedFunctionsForLINK(bytes memory _data) {
         bytes4 funcSelector;
         assembly { // solhint-disable-line no-inline-assembly
             funcSelector := mload(add(_data, 32))
@@ -485,7 +440,7 @@ contract Oracle is WinklinkRequestInterface, OracleInterface, Ownable {
      * @dev Reverts if the given payload is less than needed to create a request
      * @param _data The request payload
      */
-    modifier validRequestLength(bytes _data) {
+    modifier validRequestLength(bytes memory _data) {
         require(_data.length >= MINIMUM_REQUEST_LENGTH, "Invalid request length");
         _;
     }

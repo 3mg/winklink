@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.5.14;
+pragma solidity >=0.7.0 <0.9.0;
 
 interface WinTokenInterface {
   function allowance(address owner, address spender) external view returns (uint256 remaining);

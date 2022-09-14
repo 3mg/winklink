@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.5.14;
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./Median.sol";
 import "./Owned.sol";
@@ -73,13 +73,13 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
   uint32 public minSubmissionCount;
   uint32 public restartDelay;
   uint32 public timeout;
-  uint8 public decimals;
-  string public description;
+  uint8 public override decimals;
+  string public override description;
 
   int256 public minSubmissionValue;
   int256 public maxSubmissionValue;
 
-  uint256 constant public version = 3;
+  uint256 constant public override version = 3;
 
   /**
    * @notice To ensure owner isn't withdrawing required funds as oracles are
@@ -343,6 +343,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function latestAnswer()
     public
+    override
     view
     returns (int256)
   {
@@ -359,6 +360,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function latestTimestamp()
     public
+    override
     view
     returns (uint256)
   {
@@ -375,6 +377,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function latestRound()
     public
+    override
     view
     returns (uint256)
   {
@@ -392,6 +395,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function getAnswer(uint256 _roundId)
     public
+    override
     view
     returns (int256)
   {
@@ -412,6 +416,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function getTimestamp(uint256 _roundId)
     public
+    override
     view
     returns (uint256)
   {
@@ -441,6 +446,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
   function getRoundData(uint80 _roundId)
     public
+    override
     view
     returns (
       uint80 roundId,
@@ -486,6 +492,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
    */
    function latestRoundData()
     public
+    override
     view
     returns (
       uint80 roundId,
@@ -834,7 +841,7 @@ contract FluxAggregator is AggregatorInterface, AggregatorV3Interface, Owned {
     rounds[_roundId].answeredInRound = _roundId;
     latestRoundId = _roundId;
 
-    emit AnswerUpdated(newAnswer, _roundId, now);
+    emit AnswerUpdated(newAnswer, _roundId, block.timestamp);
 
     return (true, newAnswer);
   }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.5.14;
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./Owned.sol";
 import "./AggregatorV2V3Interface.sol";
@@ -38,6 +38,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function latestAnswer()
     public
+    override
     view
     returns (int256 answer)
   {
@@ -54,6 +55,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function latestTimestamp()
     public
+    override
     view
     returns (uint256 updatedAt)
   {
@@ -71,6 +73,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function getAnswer(uint256 _roundId)
     public
+    override
     view
     returns (int256 answer)
   {
@@ -94,6 +97,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function getTimestamp(uint256 _roundId)
     public
+    override
     view
     returns (uint256 updatedAt)
   {
@@ -118,6 +122,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function latestRound()
     public
+    override
     view
     returns (uint256 roundId)
   {
@@ -152,6 +157,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function getRoundData(uint80 _roundId)
     public
+    override
     view
     returns (
       uint80 roundId,
@@ -198,6 +204,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function latestRoundData()
     public
+    override
     view
     returns (
       uint80 roundId,
@@ -300,6 +307,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function decimals()
     external
+    override
     view
     returns (uint8)
   {
@@ -312,6 +320,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function version()
     external
+    override
     view
     returns (uint256)
   {
@@ -323,6 +332,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
   function description()
     external
+    override
     view
     returns (string memory)
   {

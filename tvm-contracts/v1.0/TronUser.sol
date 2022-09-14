@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity >=0.7.0 <0.9.0;
 
 /**
  * @title Ownable
@@ -397,12 +397,12 @@ library CBOR {
         }
     }
 
-    function encodeBytes(Buffer.buffer memory buf, bytes value) internal pure {
+    function encodeBytes(Buffer.buffer memory buf, bytes memory value) internal pure {
         encodeType(buf, MAJOR_TYPE_BYTES, value.length);
         buf.append(value);
     }
 
-    function encodeString(Buffer.buffer memory buf, string value) internal pure {
+    function encodeString(Buffer.buffer memory buf, string memory value) internal pure {
         encodeType(buf, MAJOR_TYPE_STRING, bytes(value).length);
         buf.append(bytes(value));
     }
@@ -543,7 +543,7 @@ interface WinklinkRequestInterface {
         bytes4 callbackFunctionId,
         uint256 nonce,
         uint256 version,
-        bytes data
+        bytes memory data
     ) external;
 
     function cancelOracleRequest(
@@ -616,7 +616,7 @@ library Winklink {
      * @param self The initialized request
      * @param _data The CBOR data
      */
-    function setBuffer(Request memory self, bytes _data)
+    function setBuffer(Request memory self, bytes memory _data)
     internal pure
     {
         Buffer.init(self.buf, _data.length);
@@ -629,7 +629,7 @@ library Winklink {
      * @param _key The name of the key
      * @param _value The string value to add
      */
-    function add(Request memory self, string _key, string _value)
+    function add(Request memory self, string memory _key, string memory _value)
     internal pure
     {
         self.buf.encodeString(_key);
@@ -642,7 +642,7 @@ library Winklink {
      * @param _key The name of the key
      * @param _value The bytes value to add
      */
-    function addBytes(Request memory self, string _key, bytes _value)
+    function addBytes(Request memory self, string memory _key, bytes memory _value)
     internal pure
     {
         self.buf.encodeString(_key);
@@ -655,7 +655,7 @@ library Winklink {
      * @param _key The name of the key
      * @param _value The int256 value to add
      */
-    function addInt(Request memory self, string _key, int256 _value)
+    function addInt(Request memory self, string memory _key, int256 _value)
     internal pure
     {
         self.buf.encodeString(_key);
@@ -668,7 +668,7 @@ library Winklink {
      * @param _key The name of the key
      * @param _value The uint256 value to add
      */
-    function addUint(Request memory self, string _key, uint256 _value)
+    function addUint(Request memory self, string memory _key, uint256 _value)
     internal pure
     {
         self.buf.encodeString(_key);
@@ -681,7 +681,7 @@ library Winklink {
      * @param _key The name of the key
      * @param _values The array of string values to add
      */
-    function addStringArray(Request memory self, string _key, string[] memory _values)
+    function addStringArray(Request memory self, string memory _key, string[] memory _values)
     internal pure
     {
         self.buf.encodeString(_key);
@@ -693,33 +693,33 @@ library Winklink {
     }
 }
 
-contract WinkMid {
+abstract contract WinkMid {
 
-    function setToken(address tokenAddress) public;
+    function setToken(address tokenAddress) public virtual;
 
-    function transferAndCall(address from, address to, uint tokens, bytes _data) public returns (bool success);
+    function transferAndCall(address from, address to, uint tokens, bytes memory _data) public virtual returns (bool success);
 
-    function balanceOf(address guy) public view returns (uint);
+    function balanceOf(address guy) public virtual view returns (uint);
 
-    function transferFrom(address src, address dst, uint wad) public returns (bool);
+    function transferFrom(address src, address dst, uint wad) public virtual returns (bool);
 
-    function allowance(address src, address guy) public view returns (uint);
+    function allowance(address src, address guy) public virtual view returns (uint);
 
 }
 
-contract TRC20Interface {
+abstract contract TRC20Interface {
 
-    function totalSupply() public view returns (uint);
+    function totalSupply() public virtual view returns (uint);
 
-    function balanceOf(address guy) public view returns (uint);
+    function balanceOf(address guy) public virtual view returns (uint);
 
-    function allowance(address src, address guy) public view returns (uint);
+    function allowance(address src, address guy) public virtual view returns (uint);
 
-    function approve(address guy, uint wad) public returns (bool);
+    function approve(address guy, uint wad) public virtual returns (bool);
 
-    function transfer(address dst, uint wad) public returns (bool);
+    function transfer(address dst, uint wad) public virtual returns (bool);
 
-    function transferFrom(address src, address dst, uint wad) public returns (bool);
+    function transferFrom(address src, address dst, uint wad) public virtual returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -736,7 +736,7 @@ contract WinklinkClient {
 
     uint256 constant internal LINK = 10 ** 18;
     uint256 constant private AMOUNT_OVERRIDE = 0;
-    address constant private SENDER_OVERRIDE = 0x0;
+    address constant private SENDER_OVERRIDE = address(0x0);
     uint256 constant private ARGS_VERSION = 1;
 
     WinkMid internal winkMid;
@@ -776,7 +776,7 @@ contract WinklinkClient {
     internal
     returns (bytes32)
     {
-        return sendWinklinkRequestTo(oracle, _req, _payment);
+        return sendWinklinkRequestTo(address(oracle), _req, _payment);
     }
 
     /**
@@ -787,7 +787,7 @@ contract WinklinkClient {
      * @param _oracle The address of the oracle for the request
      * @param _req The initialized Winklink Request
      * @param _payment The amount of LINK to send for the request
-     * @return The request ID
+     * @return requestId The request ID
      */
     function sendWinklinkRequestTo(address _oracle, Winklink.Request memory _req, uint256 _payment)
     internal
@@ -952,6 +952,7 @@ contract WinklinkClient {
  */
 contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
     using SignedSafeMath for int256;
+    using SafeMath for uint256;
 
     struct Answer {
         uint128 minimumResponses;
@@ -1011,7 +1012,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
         uint256 oraclePayment = paymentAmount;
 
         for (uint i = 0; i < oracles.length; i++) {
-            request = buildWinklinkRequest(jobIds[i], this, this.winklinkCallback.selector);
+            request = buildWinklinkRequest(jobIds[i], address(this), this.winklinkCallback.selector);
             requestId = sendWinklinkRequestTo(oracles[i], request, oraclePayment);
             requestAnswers[requestId] = answerCounter;
         }
@@ -1059,8 +1060,8 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
     function updateRequestDetails(
         uint128 _paymentAmount,
         uint128 _minimumResponses,
-        address[] _oracles,
-        bytes32[] _jobIds
+        address[] memory _oracles,
+        bytes32[] memory _jobIds
     )
     public
     onlyOwner()
@@ -1146,7 +1147,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
     onlyOwner()
     {
         transferLINK(owner, winkMid.balanceOf(address(this)));
-        selfdestruct(owner);
+        selfdestruct(payable(owner));
     }
 
     /**
@@ -1175,10 +1176,10 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
         }
         currentAnswerValue = currentAnswerTemp;
         latestCompletedAnswer = _answerId;
-        updatedTimestampValue = now;
-        updatedTimestamps[_answerId] = now;
+        updatedTimestampValue = block.timestamp;
+        updatedTimestamps[_answerId] = block.timestamp;
         currentAnswers[_answerId] = currentAnswerTemp;
-        emit AnswerUpdated(currentAnswerTemp, _answerId, now);
+        emit AnswerUpdated(currentAnswerTemp, _answerId, block.timestamp);
     }
 
     /**
@@ -1186,6 +1187,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     function latestAnswer()
     external
+    override
     view
     returns (int256)
     {
@@ -1197,6 +1199,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     function latestTimestamp()
     external
+    override
     view
     returns (uint256)
     {
@@ -1209,6 +1212,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     function getAnswer(uint256 _roundId)
     external
+    override
     view
     returns (int256)
     {
@@ -1221,6 +1225,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     function getTimestamp(uint256 _roundId)
     external
+    override
     view
     returns (uint256)
     {
@@ -1232,6 +1237,7 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     function latestRound()
     external
+    override
     view
     returns (uint256)
     {
@@ -1348,8 +1354,8 @@ contract Aggregator is AggregatorInterface, WinklinkClient, Ownable {
      */
     modifier validateAnswerRequirements(
         uint256 _minimumResponses,
-        address[] _oracles,
-        bytes32[] _jobIds
+        address[] memory _oracles,
+        bytes32[] memory _jobIds
     ) {
         require(_oracles.length <= MAX_ORACLE_COUNT, "cannot have more than 45 oracles");
         require(_oracles.length >= _minimumResponses, "must have at least as many oracles as responses");

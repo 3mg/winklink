@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./VRFConsumerBase.sol";
 import "./Owned.sol";
@@ -10,6 +10,7 @@ import "./Owned.sol";
  * @dev This is only an example implementation and not necessarily suitable for mainnet.
  */
 contract VRFDemo is VRFConsumerBase, Owned {
+    using SafeMathTron for uint256;
     uint256 private constant ROLL_IN_PROGRESS = 42;
 
     bytes32 private s_keyHash;
@@ -41,7 +42,7 @@ contract VRFDemo is VRFConsumerBase, Owned {
     {
         s_keyHash = keyHash;
         s_fee = fee;
-        
+
     }
 
     /**
@@ -99,7 +100,7 @@ contract VRFDemo is VRFConsumerBase, Owned {
     /**
      * @notice Withdraw WIN from this contract.
      * @dev this is an example only, and in a real contract withdrawals should
-     * happen according to the established withdrawal pattern: 
+     * happen according to the established withdrawal pattern:
      * https://docs.soliditylang.org/en/v0.4.24/common-patterns.html#withdrawal-from-contracts
      * @param to the address to withdraw WIN to
      * @param value the amount of WIN to withdraw

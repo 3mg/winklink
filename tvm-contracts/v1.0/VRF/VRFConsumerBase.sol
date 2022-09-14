@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./TRC20Interface.sol";
 import "./VRFRequestIDBase.sol";
@@ -99,6 +99,7 @@ import "./Owned.sol";
  */
 abstract contract VRFConsumerBase is VRFRequestIDBase, WinklinkClient {
     using SignedSafeMath for int256;
+    using SafeMathTron for uint256;
 
     event VRFRequested(bytes32 indexed id);
 
@@ -182,7 +183,7 @@ abstract contract VRFConsumerBase is VRFRequestIDBase, WinklinkClient {
      * @param _vrfCoordinator The address of the VRFCoordinator contract
      * @dev https://docs.chain.link/docs/link-token-contracts
      */
-    constructor(address _vrfCoordinator, address _win, address _winkMid) public {
+    constructor(address _vrfCoordinator, address _win, address _winkMid) {
         setWinklinkToken(_win);
         setWinkMid(_winkMid);
         vrfCoordinator = _vrfCoordinator;
